@@ -20,70 +20,57 @@ import org.aspectj.lang.reflect.FieldSignature;
  *
  */
 public aspect TrialAspect {
-	
 
-	 
-	  
-	//  pointcut fonction(int x):call(void come.swe795.tracker.Employee.setMasonID(..)) && args(x);
-	
-	
-/*	void around(MasonPerson e): set(int MasonPerson.*) && target(e){
-		FieldSignature fieldSignature = (FieldSignature) thisJoinPoint.getSignature();
-        Field field = fieldSignature.getField();
-        try {
-            Object oldValue = field.getInt(e);
-            Object newValue = thisJoinPoint.getArgs()[0];
-            proceed(e);
-            Object actualNewValue = field.get(e);
+	// pointcut fonction(int x):call(void
+	// come.swe795.tracker.Employee.setMasonID(..)) && args(x);
 
-            Map<Integer, Integer> innerMap= new HashMap<>();
-            Map<String, Map<Integer, Integer>> outerMap= new HashMap<>();
+	/*
+	 * void around(MasonPerson e): set(int MasonPerson.*) && target(e){
+	 * FieldSignature fieldSignature = (FieldSignature)
+	 * thisJoinPoint.getSignature(); Field field = fieldSignature.getField();
+	 * try { Object oldValue = field.getInt(e); Object newValue =
+	 * thisJoinPoint.getArgs()[0]; proceed(e); Object actualNewValue =
+	 * field.get(e);
+	 * 
+	 * Map<Integer, Integer> innerMap= new HashMap<>(); Map<String, Map<Integer,
+	 * Integer>> outerMap= new HashMap<>();
+	 * 
+	 * String fieldName = field.getName();
+	 * innerMap.put((Integer)oldValue,(Integer)newValue);
+	 * outerMap.put(fieldName, innerMap); Test.logger.add(outerMap);
+	 * 
+	 * 
+	 * System.out.printf("changed field %s: old value=%d, new value=%d, " +
+	 * "actual new value=%d\n", field, oldValue, newValue, actualNewValue);
+	 * 
+	 * 
+	 * } catch (IllegalArgumentException | IllegalAccessException ex) { throw
+	 * new RuntimeException(ex); }
+	 * 
+	 * }
+	 */
 
-            String fieldName = field.getName();
-            innerMap.put((Integer)oldValue,(Integer)newValue);
-            outerMap.put(fieldName, innerMap);
-            Test.logger.add(outerMap);
-
-          
-            System.out.printf("changed field %s: old value=%d, new value=%d, "
-                    + "actual new value=%d\n", 
-                    field, oldValue, newValue, actualNewValue);
-            
-            
-        } catch (IllegalArgumentException | IllegalAccessException ex) {
-            throw new RuntimeException(ex);
-        }
-        
-	}*/
-	
 	void around(Calculate e): set(int Calculate.*) && target(e){
 		FieldSignature fieldSignature = (FieldSignature) thisJoinPoint.getSignature();
-        Field field = fieldSignature.getField();
-        try {
-            Object oldValue = field.getInt(e);
-            Object newValue = thisJoinPoint.getArgs()[0];
-            proceed(e);
-            Object actualNewValue = field.get(e);
+		Field field = fieldSignature.getField();
+		try {
+			Object oldValue = field.getInt(e);
+			Object newValue = thisJoinPoint.getArgs()[0];
+			proceed(e);
+			Object actualNewValue = field.get(e);
 
-            Map<Integer, Integer> innerMap= new HashMap<>();
-            Map<String, Map<Integer, Integer>> outerMap= new HashMap<>();
+			Map<Integer, Integer> innerMap = new HashMap<>();
+			Map<String, Map<Integer, Integer>> outerMap = new HashMap<>();
 
-            String fieldName = field.getName();
-            innerMap.put((Integer)oldValue,(Integer)newValue);
-            outerMap.put(fieldName, innerMap);
-            Calculate.logger.add(outerMap);
-    
-            
-        } catch (IllegalArgumentException | IllegalAccessException ex) {
-            throw new RuntimeException(ex);
-        }
-        
+			String fieldName = field.getName();
+			innerMap.put((Integer) oldValue, (Integer) newValue);
+			outerMap.put(fieldName, innerMap);
+			Calculate.logger.add(outerMap);
+
+		} catch (IllegalArgumentException | IllegalAccessException ex) {
+			throw new RuntimeException(ex);
+		}
+
 	}
-	
-	
-	
 
-	  
-	
-	
 }

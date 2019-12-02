@@ -19,13 +19,10 @@ public class Calculate {
 	public int oddOrPositiveCounter;
 	public int totalOddOrPositiveCount;
 	public static ArrayList<Map<String, Map<Integer, Integer>>> logger = new ArrayList<>();
-
-
+	int[] x = {2,3,5,5,5,6,7};
 	
 	Calculate(){
 		DebuggerHook.injectDebugger(this, null);
-		
-		
 	}
 	
 	/*
@@ -35,14 +32,14 @@ public class Calculate {
 	 * @param y value to look for
 	 * @return last index of y in x; -1 if absent
 	 */
-	public int findLast(int[] x, int y) {
-		for( lastCounter=x.length-1;lastCounter>0;lastCounter--) {
+	public int findLastOccurrenceInArray(int[] x, int y) {
+		for( lastCounter=x.length-1;lastCounter>0;lastCounter--) { // <-- faulty code
+//		for( lastCounter=x.length-1;lastCounter>=0;lastCounter--) { // <-- correct code
 			if(x[lastCounter]==y) {
 				return lastCounter;
 			}
 		}
 		return -1;
-
 	}
 	
 	/*
@@ -52,8 +49,9 @@ public class Calculate {
 	 * 
 	 */
 	
-	public int lastZero(int[] x) {
-		for( lastZeroCounter=0;lastZeroCounter<x.length;lastZeroCounter++) {
+	public int findLastIndexOfZero(int[] x) {
+		for(lastZeroCounter = 0;lastZeroCounter <x.length;lastZeroCounter++) {          // <-- faulty code
+//		for(lastZeroCounter = x.length-1; lastZeroCounter <= 0; lastZeroCounter-- ) {	// <-- correct code
 			if(x[lastZeroCounter]==0) {
 				return lastZeroCounter;
 			}
@@ -64,33 +62,33 @@ public class Calculate {
 	
 	
 	/*
-	 * Count positive elements
+	 * Count of the positive elements (>= 1) in array
 	 * @param x array to search
 	 * @return count of positive element in x
 	 */
 	public int countPositive(int[] x) {
 		for( positiveCounter = 0 ; positiveCounter < x.length; positiveCounter++) {
-			if(x[positiveCounter]>=0) {
+			if(x[positiveCounter]>=0) {								// <-- faulty code
+//			if(x[positiveCounter]>0) { 								// <-- correct code
 				totalPositiveCount++;
 			}
 		}
 		return totalPositiveCount;
-
 	}
 	
 	/*
-	 * Count odd or positive elements
+	 * Count of the odd or positive elements in array
 	 * @param x array to search
 	 * @return count of odd/positive values in x
 	 */
-	public int oddOrPos(int[] x) {
-		for( oddOrPositiveCounter =0; oddOrPositiveCounter < x.length; oddOrPositiveCounter++) {
-			if(x[oddOrPositiveCounter]%2==1||x[oddOrPositiveCounter]>0) {
+	public int countOfOddOrPos(int[] x) {
+		for( oddOrPositiveCounter = 0; oddOrPositiveCounter < x.length; oddOrPositiveCounter++) {
+			if(x[oddOrPositiveCounter]%2 == 1 || x[oddOrPositiveCounter] > 0) { 		// <-- faulty code
+//			if(x[oddOrPositiveCounter]%2 == -1 || x[oddOrPositiveCounter] > 0) { 		// <-- correct code
 				 totalOddOrPositiveCount++;
 			}
 		}
 		return totalOddOrPositiveCount;
-
 	}
 	
 	
@@ -103,10 +101,10 @@ public class Calculate {
 
 
 		Calculate c = new Calculate();
-		int a = c.findLast(x,5);
-		int b = c.lastZero(y);
+		int a = c.findLastOccurrenceInArray(x,5);
+		int b = c.findLastIndexOfZero(y);
 		int cc = c.countPositive(z);
-		int d = c.oddOrPos(w);
+		int d = c.countOfOddOrPos(w);
 		
 		System.out.println(a);
 		System.out.println(b);
