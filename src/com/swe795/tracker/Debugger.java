@@ -1207,6 +1207,584 @@ public class Debugger extends JFrame {
 				public void mousePressed(MouseEvent mouseEvent) {
 					System.out.println("FIELD CLICKED");
 					JTable table = (JTable) mouseEvent.getSource();
+					// --------
+					if (mouseEvent.getClickCount() == 1 && table.getSelectedRow() != -1) {
+						
+						Data data = (Data) table.getValueAt(table.getSelectedRow(), 2);
+						boolean isField = data.data[1] instanceof Field;
+						Class<?> type = isField ? ((Field) data.data[1]).getType()
+								: ((Class<?>) data.data[4]).getComponentType();
+
+						GridBagConstraints ownerLabelC = new GridBagConstraints();
+						ownerLabelC.insets = new Insets(10, 10, 0, 0);
+						ownerLabelC.anchor = GridBagConstraints.NORTHWEST;
+						ownerLabelC.fill = GridBagConstraints.HORIZONTAL;
+						ownerLabelC.weightx = 1;
+						if (isField) {
+							System.out.println("IF HERE");
+
+							GridBagConstraints accessModC = new GridBagConstraints();
+							accessModC.insets = new Insets(10, 10, 0, 0);
+							accessModC.anchor = GridBagConstraints.NORTHWEST;
+							accessModC.fill = GridBagConstraints.HORIZONTAL;
+							accessModC.gridy = 1;
+							accessModC.weightx = 1;
+							Field field = (Field) data.data[1];
+							String fieldString = "<b><font color=7f0055>" + Modifier.toString(field.getModifiers())
+									+ "</font></b>";
+							if (field.isSynthetic())
+								fieldString += " synthetic";
+							if (field.getType().isPrimitive())
+								fieldString += " <b><font color=7f0055>" + getArrayName(field.getType())
+										+ "</font></b>";
+							else
+								fieldString += " " + getArrayName(field.getType());
+							fieldString += " <font color=0000c0>" + field.getName() + "</font>";
+							selectedField = field.getName();
+							System.out.println("selectedFIELD " + selectedField);
+							JScrollPane test = setLogData();
+							sp = test;
+							validate();
+							repaint();
+
+							// test.setLayout(new ScrollPaneLayout());
+							// test.setPreferredSize(test.getPreferredSize());
+
+							// panel.remove(sp);
+							// panel.add(test);
+							// panel.remove(dataLog);
+							// panel.remove(scrollPane);
+							//
+							// test.setLayout(new ScrollPaneLayout());
+							// test.setPreferredSize(test.getPreferredSize());
+
+						} else {
+							System.out.println("ELSEING HERE");
+							GridBagConstraints accessModC = new GridBagConstraints();
+							accessModC.insets = new Insets(10, 10, 0, 0);
+							accessModC.anchor = GridBagConstraints.NORTHWEST;
+							accessModC.fill = GridBagConstraints.HORIZONTAL;
+							accessModC.gridy = 1;
+							accessModC.weightx = 1;
+						}
+						Object value = null;
+						try {
+							boolean accessible = false;
+							if (isField) {
+								accessible = ((Field) data.data[1]).isAccessible();
+								((Field) data.data[1]).setAccessible(true);
+							}
+							if (table.getValueAt(table.getSelectedRow(), 0) != null)
+								value = isField ? ((Field) data.data[1]).get(data.data[2])
+										: Array.get(data.data[1], (int) data.data[2]);
+							if (isField)
+								((Field) data.data[1]).setAccessible(accessible);
+						} catch (Exception e) {
+							showErrorDialog("Cannot get field value.", e);
+						}
+						JPanel panel = new JPanel(new GridBagLayout());
+						GridBagConstraints panelC = new GridBagConstraints();
+						panelC.insets = new Insets(10, 10, 0, 0);
+						panelC.anchor = GridBagConstraints.NORTHWEST;
+						panelC.fill = GridBagConstraints.BOTH;
+						panelC.gridy = 2;
+						panelC.weightx = 1;
+						JCheckBox nullBox = new JCheckBox("Null");
+						JButton setValue = new JButton("Set Value");
+						if (table.getValueAt(table.getSelectedRow(), 0) == null)
+							setValue.setEnabled(false);
+						if (type == boolean.class || Enum.class.isAssignableFrom(type)) {
+							GridBagConstraints textC = new GridBagConstraints();
+							textC.anchor = GridBagConstraints.NORTHWEST;
+							textC.insets = new Insets(3, 0, 10, 0);
+							panel.add(new JLabel(type == boolean.class ? "Boolean:   " : "Enum:   "), textC);
+							JComboBox<String> comboBox = new JComboBox<>();
+							List<Field> enumFields = new ArrayList<>();
+							if (type == boolean.class) {
+								comboBox.addItem("true");
+								comboBox.addItem("false");
+								if (value != null && value.equals(true))
+									comboBox.setSelectedIndex(0);
+								else
+									comboBox.setSelectedIndex(1);
+								nullBox.setEnabled(false);
+							} else {
+								for (Field f : type.getDeclaredFields())
+									if (f.getType() == type && Modifier.isStatic(f.getModifiers()))
+										enumFields.add(f);
+								for (Field f : enumFields)
+									comboBox.addItem(f.getName());
+								if (table.getValueAt(table.getSelectedRow(), 0) == null) {
+									nullBox.setEnabled(false);
+									comboBox.setEnabled(false);
+								} else if (value == null) {
+									nullBox.setSelected(true);
+									comboBox.setEnabled(false);
+								} else {
+									comboBox.setSelectedItem(((Enum<?>) value).name());
+									if (comboBox.getItemCount() == 0)
+										comboBox.addItem(((Enum<?>) value).name());
+								}
+							}
+							GridBagConstraints valueC = new GridBagConstraints();
+							valueC.anchor = GridBagConstraints.NORTHWEST;
+							valueC.gridx = 1;
+							valueC.weightx = 1;
+							panel.add(comboBox, valueC);
+							nullBox.addActionListener(a -> {
+								if (nullBox.isSelected())
+									comboBox.setEnabled(false);
+								else
+									comboBox.setEnabled(true);
+							});
+							setValue.addActionListener(a -> {
+								try {
+									if (nullBox.isSelected()) {
+										if (isField) {
+											if (!Enum.class.isAssignableFrom(type))
+												throw new IllegalStateException(type.getName());
+											boolean accessible = false;
+											int modifier = 0;
+											accessible = ((Field) data.data[1]).isAccessible();
+											modifier = ((Field) data.data[1]).getModifiers();
+											((Field) data.data[1]).setAccessible(true);
+											Field modifiersField = Field.class.getDeclaredField("modifiers");
+											modifiersField.setAccessible(true);
+											modifiersField.setInt(((Field) data.data[1]),
+													((Field) data.data[1]).getModifiers() & ~Modifier.FINAL);
+											((Field) data.data[1]).set(data.data[2], null);
+											for (int i = 0; i < fieldsTable.getRowCount(); i++) {
+												Data data1 = (Data) fieldsTable.getModel().getValueAt(i, 2);
+												if (data1 == data) {
+													fieldsTable.getModel().setValueAt(null, i, 3);
+													data.data[3] = ((Field) data.data[1]).get(data.data[2]) == null;
+													break;
+												}
+											}
+											((Field) data.data[1]).setAccessible(accessible);
+											modifiersField.setInt(((Field) data.data[1]), modifier);
+											modifiersField.setAccessible(false);
+										} else {
+											if (!Enum.class.isAssignableFrom(type))
+												throw new IllegalStateException(type.getName());
+											Array.set(data.data[1], (int) data.data[2], null);
+											for (int i = 0; i < fieldsTable.getRowCount(); i++) {
+												Data data1 = (Data) fieldsTable.getModel().getValueAt(i, 2);
+												if (data1 == data) {
+													fieldsTable.getModel().setValueAt(null, i, 3);
+													data.data[3] = true;
+													break;
+												}
+											}
+										}
+									} else {
+										if (isField) {
+											boolean accessible = false;
+											int modifier = 0;
+											accessible = ((Field) data.data[1]).isAccessible();
+											modifier = ((Field) data.data[1]).getModifiers();
+											((Field) data.data[1]).setAccessible(true);
+											Field modifiersField = Field.class.getDeclaredField("modifiers");
+											modifiersField.setAccessible(true);
+											modifiersField.setInt(((Field) data.data[1]),
+													((Field) data.data[1]).getModifiers() & ~Modifier.FINAL);
+											try {
+												if (type == boolean.class) {
+													boolean prim = comboBox.getSelectedIndex() == 0;
+													((Field) data.data[1]).setBoolean(data.data[2], prim);
+												} else if (Enum.class.isAssignableFrom(type)) {
+													if (comboBox.getSelectedIndex() < enumFields.size()
+															&& comboBox.getSelectedIndex() != -1) {
+														boolean accessible1 = false;
+														int modifier1 = 0;
+														accessible1 = enumFields.get(comboBox.getSelectedIndex())
+																.isAccessible();
+														modifier1 = enumFields.get(comboBox.getSelectedIndex())
+																.getModifiers();
+														enumFields.get(comboBox.getSelectedIndex()).setAccessible(true);
+														modifiersField.setInt(
+																enumFields.get(comboBox.getSelectedIndex()),
+																enumFields.get(comboBox.getSelectedIndex())
+																		.getModifiers() & ~Modifier.FINAL);
+														((Field) data.data[1]).set(data.data[2],
+																enumFields.get(comboBox.getSelectedIndex()).get(null));
+														enumFields.get(comboBox.getSelectedIndex())
+																.setAccessible(accessible1);
+														modifiersField.setInt(
+																enumFields.get(comboBox.getSelectedIndex()), modifier1);
+													} else
+														((Field) data.data[1]).set(data.data[2], null);
+												} else
+													throw new IllegalStateException(type.getName());
+											} finally {
+												for (int i = 0; i < fieldsTable.getRowCount(); i++) {
+													Data data1 = (Data) fieldsTable.getModel().getValueAt(i, 2);
+													if (data1 == data) {
+														fieldsTable.getModel().setValueAt(
+																((Field) data.data[1]).get(data.data[2]), i, 3);
+														data.data[3] = ((Field) data.data[1]).get(data.data[2]) == null;
+														break;
+													}
+												}
+												((Field) data.data[1]).setAccessible(accessible);
+												modifiersField.setInt(((Field) data.data[1]), modifier);
+												modifiersField.setAccessible(false);
+											}
+										} else {
+											if (type == boolean.class) {
+												boolean prim = comboBox.getSelectedIndex() == 0;
+												Array.setBoolean(data.data[1], (int) data.data[2], prim);
+											} else if (Enum.class.isAssignableFrom(type)) {
+												if (comboBox.getSelectedIndex() < enumFields.size()
+														&& comboBox.getSelectedIndex() != -1) {
+													Field modifiersField = Field.class.getDeclaredField("modifiers");
+													modifiersField.setAccessible(true);
+													boolean accessible1 = false;
+													int modifier1 = 0;
+													accessible1 = enumFields.get(comboBox.getSelectedIndex())
+															.isAccessible();
+													modifier1 = enumFields.get(comboBox.getSelectedIndex())
+															.getModifiers();
+													enumFields.get(comboBox.getSelectedIndex()).setAccessible(true);
+													modifiersField.setInt(enumFields.get(comboBox.getSelectedIndex()),
+															enumFields.get(comboBox.getSelectedIndex()).getModifiers()
+																	& ~Modifier.FINAL);
+													Array.set(data.data[1], (int) data.data[2],
+															enumFields.get(comboBox.getSelectedIndex()).get(null));
+													enumFields.get(comboBox.getSelectedIndex())
+															.setAccessible(accessible1);
+													modifiersField.setInt(enumFields.get(comboBox.getSelectedIndex()),
+															modifier1);
+													modifiersField.setAccessible(false);
+												} else
+													Array.set(data.data[1], (int) data.data[2], null);
+											} else
+												throw new IllegalStateException(type.getName());
+											for (int i = 0; i < fieldsTable.getRowCount(); i++) {
+												Data data1 = (Data) fieldsTable.getModel().getValueAt(i, 2);
+												if (data1 == data) {
+													fieldsTable.getModel().setValueAt(
+															Array.get(data.data[1], (int) data.data[2]), i, 3);
+													data.data[3] = Array.get(data.data[1], (int) data.data[2]) == null;
+													break;
+												}
+											}
+										}
+									}
+								} catch (Exception e) {
+									showErrorDialog("Error setting field.", e);
+								}
+							});
+						} else if (type.isArray()) {
+							JLabel text = new JLabel("Value:   ");
+							GridBagConstraints textC = new GridBagConstraints();
+							textC.anchor = GridBagConstraints.NORTHWEST;
+							textC.insets = new Insets(3, 0, 10, 0);
+							panel.add(text, textC);
+							ListButton arrButton = new ListButton("Edit Array",
+									value == null ? Array.newInstance(type.getComponentType(), 0) : value,
+									type.getComponentType(), panel);
+							GridBagConstraints arrButtonC = new GridBagConstraints();
+							arrButtonC.anchor = GridBagConstraints.NORTHWEST;
+							arrButtonC.gridx = 1;
+							arrButtonC.weightx = 1;
+							panel.add(arrButton, arrButtonC);
+
+							if (table.getValueAt(table.getSelectedRow(), 0) == null) {
+								nullBox.setEnabled(false);
+								arrButton.setEnabled(false);
+							} else if (value == null) {
+								nullBox.setSelected(true);
+								arrButton.setEnabled(false);
+							}
+							Class<?> compType = getRealComponentType(type);
+							if (!String.class.isAssignableFrom(compType) && !compType.isPrimitive()
+									&& !Enum.class.isAssignableFrom(compType)) {
+								nullBox.setEnabled(false);
+								arrButton.setEnabled(false);
+								setValue.setEnabled(false);
+							}
+							nullBox.addActionListener(a -> {
+								if (nullBox.isSelected())
+									arrButton.setEnabled(false);
+								else
+									arrButton.setEnabled(true);
+							});
+							setValue.addActionListener(a -> {
+								try {
+									if (nullBox.isSelected()) {
+										if (isField) {
+											boolean accessible = false;
+											int modifier = 0;
+											accessible = ((Field) data.data[1]).isAccessible();
+											modifier = ((Field) data.data[1]).getModifiers();
+											((Field) data.data[1]).setAccessible(true);
+											Field modifiersField = Field.class.getDeclaredField("modifiers");
+											modifiersField.setAccessible(true);
+											modifiersField.setInt(((Field) data.data[1]),
+													((Field) data.data[1]).getModifiers() & ~Modifier.FINAL);
+											((Field) data.data[1]).set(data.data[2], null);
+											for (int i = 0; i < fieldsTable.getRowCount(); i++) {
+												Data data1 = (Data) fieldsTable.getModel().getValueAt(i, 2);
+												if (data1 == data) {
+													fieldsTable.getModel().setValueAt(null, i, 3);
+													data.data[3] = ((Field) data.data[1]).get(data.data[2]) == null;
+													break;
+												}
+											}
+											((Field) data.data[1]).setAccessible(accessible);
+											modifiersField.setInt(((Field) data.data[1]), modifier);
+											modifiersField.setAccessible(false);
+										} else {
+											Array.set(data.data[1], (int) data.data[2], null);
+											for (int i = 0; i < fieldsTable.getRowCount(); i++) {
+												Data data1 = (Data) fieldsTable.getModel().getValueAt(i, 2);
+												if (data1 == data) {
+													fieldsTable.getModel().setValueAt(null, i, 3);
+													data.data[3] = true;
+													break;
+												}
+											}
+										}
+									} else {
+										if (isField) {
+											boolean accessible = false;
+											int modifier = 0;
+											accessible = ((Field) data.data[1]).isAccessible();
+											modifier = ((Field) data.data[1]).getModifiers();
+											((Field) data.data[1]).setAccessible(true);
+											Field modifiersField = Field.class.getDeclaredField("modifiers");
+											modifiersField.setAccessible(true);
+											modifiersField.setInt(((Field) data.data[1]),
+													((Field) data.data[1]).getModifiers() & ~Modifier.FINAL);
+											try {
+												((Field) data.data[1]).set(data.data[2], arrButton.array);
+											} finally {
+												for (int i = 0; i < fieldsTable.getRowCount(); i++) {
+													Data data1 = (Data) fieldsTable.getModel().getValueAt(i, 2);
+													if (data1 == data) {
+														Object valueAt = ((Field) data.data[1]).get(data.data[2]);
+														if (valueAt != null)
+															valueAt = getArrayName(((Field) data.data[1])
+																	.get(data.data[2]).getClass());
+														fieldsTable.getModel().setValueAt(valueAt, i, 3);
+														data.data[3] = ((Field) data.data[1]).get(data.data[2]) == null;
+														break;
+													}
+												}
+												((Field) data.data[1]).setAccessible(accessible);
+												modifiersField.setInt(((Field) data.data[1]), modifier);
+												modifiersField.setAccessible(false);
+											}
+										} else {
+											Array.set(data.data[1], (int) data.data[2], arrButton.array);
+											for (int i = 0; i < fieldsTable.getRowCount(); i++) {
+												Data data1 = (Data) fieldsTable.getModel().getValueAt(i, 2);
+												if (data1 == data) {
+													Object valueAt = ((Field) data.data[1]).get(data.data[2]);
+													if (valueAt != null)
+														valueAt = getArrayName(
+																((Field) data.data[1]).get(data.data[2]).getClass());
+													fieldsTable.getModel().setValueAt(valueAt, i, 3);
+													data.data[3] = Array.get(data.data[1], (int) data.data[2]) == null;
+													break;
+												}
+											}
+										}
+									}
+								} catch (Exception e) {
+									showErrorDialog("Error setting field.", e);
+								}
+							});
+						} else {
+							JLabel text = new JLabel("Value:   ");
+							GridBagConstraints textC = new GridBagConstraints();
+							textC.anchor = GridBagConstraints.NORTHWEST;
+							textC.insets = new Insets(3, 0, 10, 0);
+							panel.add(text, textC);
+							JTextField textField = new JTextField(20);
+							GridBagConstraints valueC = new GridBagConstraints();
+							valueC.anchor = GridBagConstraints.NORTHWEST;
+							valueC.gridx = 1;
+							valueC.weightx = 1;
+							panel.add(textField, valueC);
+
+							if (table.getValueAt(table.getSelectedRow(), 0) == null) {
+								nullBox.setEnabled(false);
+								textField.setEnabled(false);
+							} else if (value == null) {
+								nullBox.setSelected(true);
+								textField.setEnabled(false);
+								if (!String.class.isAssignableFrom(type) && !type.isPrimitive()) {
+									setValue.setEnabled(false);
+									nullBox.setEnabled(false);
+								}
+							} else if (String.class.isAssignableFrom(type))
+								textField.setText(value.toString());
+							else if (type.isPrimitive()) {
+								textField.setText(value.toString());
+								nullBox.setEnabled(false);
+							} else {
+								nullBox.setEnabled(false);
+								textField.setEnabled(false);
+								setValue.setEnabled(false);
+								text.setEnabled(false);
+							}
+							nullBox.addActionListener(a -> {
+								if (nullBox.isSelected())
+									textField.setEnabled(false);
+								else
+									textField.setEnabled(true);
+							});
+							setValue.addActionListener(a -> {
+								try {
+									if (nullBox.isSelected()) {
+										if (isField) {
+											if (!String.class.isAssignableFrom(type))
+												throw new IllegalStateException(type.getName());
+											boolean accessible = false;
+											int modifier = 0;
+											accessible = ((Field) data.data[1]).isAccessible();
+											modifier = ((Field) data.data[1]).getModifiers();
+											((Field) data.data[1]).setAccessible(true);
+											Field modifiersField = Field.class.getDeclaredField("modifiers");
+											modifiersField.setAccessible(true);
+											modifiersField.setInt(((Field) data.data[1]),
+													((Field) data.data[1]).getModifiers() & ~Modifier.FINAL);
+											((Field) data.data[1]).set(data.data[2], null);
+											for (int i = 0; i < fieldsTable.getRowCount(); i++) {
+												Data data1 = (Data) fieldsTable.getModel().getValueAt(i, 2);
+												if (data1 == data) {
+													fieldsTable.getModel().setValueAt(null, i, 3);
+													data.data[3] = ((Field) data.data[1]).get(data.data[2]) == null;
+													break;
+												}
+											}
+											((Field) data.data[1]).setAccessible(accessible);
+											modifiersField.setInt(((Field) data.data[1]), modifier);
+											modifiersField.setAccessible(false);
+										} else {
+											if (!String.class.isAssignableFrom(type))
+												throw new IllegalStateException(type.getName());
+											Array.set(data.data[1], (int) data.data[2], null);
+											for (int i = 0; i < fieldsTable.getRowCount(); i++) {
+												Data data1 = (Data) fieldsTable.getModel().getValueAt(i, 2);
+												if (data1 == data) {
+													fieldsTable.getModel().setValueAt(null, i, 3);
+													data.data[3] = true;
+													break;
+												}
+											}
+										}
+									} else {
+										if (isField) {
+											boolean accessible = false;
+											int modifier = 0;
+											accessible = ((Field) data.data[1]).isAccessible();
+											modifier = ((Field) data.data[1]).getModifiers();
+											((Field) data.data[1]).setAccessible(true);
+											Field modifiersField = Field.class.getDeclaredField("modifiers");
+											modifiersField.setAccessible(true);
+											modifiersField.setInt(((Field) data.data[1]),
+													((Field) data.data[1]).getModifiers() & ~Modifier.FINAL);
+											try {
+												if (type == byte.class) {
+													byte prim = Byte.parseByte(textField.getText());
+													((Field) data.data[1]).setByte(data.data[2], prim);
+												} else if (type == short.class) {
+													short prim = Short.parseShort(textField.getText());
+													((Field) data.data[1]).setShort(data.data[2], prim);
+												} else if (type == int.class) {
+													int prim = Integer.parseInt(textField.getText());
+													((Field) data.data[1]).setInt(data.data[2], prim);
+												} else if (type == long.class) {
+													long prim = Long.parseLong(textField.getText());
+													((Field) data.data[1]).setLong(data.data[2], prim);
+												} else if (type == char.class) {
+													if (textField.getText().length() == 1)
+														throw new IllegalArgumentException("Length of char must be 1");
+													((Field) data.data[1]).setChar(data.data[2],
+															textField.getText().charAt(0));
+												} else if (type == float.class) {
+													float prim = Float.parseFloat(textField.getText());
+													((Field) data.data[1]).setFloat(data.data[2], prim);
+												} else if (type == double.class) {
+													double prim = Double.parseDouble(textField.getText());
+													((Field) data.data[1]).setDouble(data.data[2], prim);
+												} else if (String.class.isAssignableFrom(type))
+													((Field) data.data[1]).set(data.data[2], textField.getText());
+												else
+													throw new IllegalStateException(type.getName());
+											} finally {
+												for (int i = 0; i < fieldsTable.getRowCount(); i++) {
+													Data data1 = (Data) fieldsTable.getModel().getValueAt(i, 2);
+													if (data1 == data) {
+														fieldsTable.getModel().setValueAt(
+																((Field) data.data[1]).get(data.data[2]), i, 3);
+														data.data[3] = ((Field) data.data[1]).get(data.data[2]) == null;
+														break;
+													}
+												}
+												((Field) data.data[1]).setAccessible(accessible);
+												modifiersField.setInt(((Field) data.data[1]), modifier);
+												modifiersField.setAccessible(false);
+											}
+										} else {
+											if (type == byte.class) {
+												byte prim = Byte.parseByte(textField.getText());
+												Array.setByte(data.data[1], (int) data.data[2], prim);
+											} else if (type == short.class) {
+												short prim = Short.parseShort(textField.getText());
+												Array.setShort(data.data[1], (int) data.data[2], prim);
+											} else if (type == int.class) {
+												int prim = Integer.parseInt(textField.getText());
+												Array.setInt(data.data[1], (int) data.data[2], prim);
+											} else if (type == long.class) {
+												long prim = Long.parseLong(textField.getText());
+												Array.setLong(data.data[1], (int) data.data[2], prim);
+											} else if (type == char.class) {
+												if (textField.getText().length() == 1)
+													throw new IllegalArgumentException("Length of char must be 1");
+												Array.setChar(data.data[1], (int) data.data[2],
+														textField.getText().charAt(0));
+											} else if (type == float.class) {
+												float prim = Float.parseFloat(textField.getText());
+												Array.setFloat(data.data[1], (int) data.data[2], prim);
+											} else if (type == double.class) {
+												double prim = Double.parseDouble(textField.getText());
+												Array.setDouble(data.data[1], (int) data.data[2], prim);
+											} else if (String.class.isAssignableFrom(type))
+												Array.set(data.data[1], (int) data.data[2], textField.getText());
+											else
+												throw new IllegalStateException(type.getName());
+											for (int i = 0; i < fieldsTable.getRowCount(); i++) {
+												Data data1 = (Data) fieldsTable.getModel().getValueAt(i, 2);
+												if (data1 == data) {
+													fieldsTable.getModel().setValueAt(
+															Array.get(data.data[1], (int) data.data[2]), i, 3);
+													data.data[3] = Array.get(data.data[1], (int) data.data[2]) == null;
+													break;
+												}
+											}
+										}
+									}
+								} catch (Exception e) {
+									showErrorDialog("Error setting field.", e);
+								}
+							});
+						}
+						GridBagConstraints nullBoxC = new GridBagConstraints();
+						nullBoxC.insets = new Insets(0, 10, 0, 0);
+						nullBoxC.anchor = GridBagConstraints.NORTHWEST;
+						nullBoxC.gridy = 3;
+
+						GridBagConstraints setValueC = new GridBagConstraints();
+						setValueC.insets = new Insets(0, 0, 20, 0);
+						setValueC.anchor = GridBagConstraints.SOUTH;
+						setValueC.weighty = 1;
+						setValueC.gridy = 4;
+					}
+					// --------
 					if (mouseEvent.getClickCount() == 2 && table.getSelectedRow() != -1) {
 						JFrame newFrame = new JFrame();
 						newFrame.setTitle("Java Debugger - Field");
